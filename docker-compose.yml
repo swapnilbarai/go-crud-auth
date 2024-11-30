@@ -9,8 +9,6 @@ services:
     ports:
       - "8080:8080"  # Map port 8080 on the host to 8080 in the container
     environment:
-      - APP_ENV=production  # Example environment variable
       - ACCESS_SECRET=swapnil
       - REFRESH_SECRET=barai
-    restart: always  # Ensure the container restarts on failure
     
