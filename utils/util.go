@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"swapnilbarai/go-crud-auth/models"
-	"swapnilbarai/go-crud-auth/utils"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -43,7 +42,7 @@ func CreateJWTToken(userName string, admin bool, tokenType string, tokenDuration
 			"aud": admin,
 		})
 	secret := AccessSecret
-	if tokenType == utils.RefrehTokenType {
+	if tokenType == RefrehTokenType {
 		secret = RefreshSecret
 	}
 	accessTokenString, err := accessToken.SignedString(secret)
@@ -56,7 +55,7 @@ func CreateJWTToken(userName string, admin bool, tokenType string, tokenDuration
 func VerifyJWTToken(token, tokenType string) (*jwt.Token, error) {
 
 	secret := AccessSecret
-	if tokenType == utils.RefrehTokenType {
+	if tokenType == RefrehTokenType {
 		secret = RefreshSecret
 	}
 	jwtToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
