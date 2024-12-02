@@ -32,7 +32,7 @@ docker-compose down
 
 ## Authentication Endpoints
 
-### POST `/auth/signup`
+### POST `/auth/signup/`
 
 This endpoint allows a new user to sign up by providing their details.
 - `role` field is used as `normal` or `admin`
@@ -41,14 +41,14 @@ This endpoint allows a new user to sign up by providing their details.
 #### Request
 
 ```sh
-curl -X POST http://localhost:8080/auth/signup \
+curl -X POST http://localhost:8080/auth/signup/ \
 -H "Content-Type: application/json" \
 -d '{
   "email": "swapnilbarai1889@gmail.com",
   "mobileNo": "9880887678",
   "username": "swapnil",
   "password": "swapnil@123",
-  "role": "normal"
+  "role": "admin"
 }'
 ```
 
@@ -60,7 +60,7 @@ curl -X POST http://localhost:8080/auth/signup \
 
 #### Request
 ```sh
-curl -X POST http://localhost:8080/auth/signin \
+curl -i POST http://localhost:8080/auth/signin \
 -d "username=swapnil" \
 -d "password=barai"
 ```
@@ -75,7 +75,7 @@ curl -X POST http://localhost:8080/auth/signin \
 
 ### Request
 ```sh
-curl -X POST http://localhost:8080/auth/refresh \
+curl -i POST http://localhost:8080/auth/refresh \
 -H "Refresh-Authorization: Bearer your-refresh-jwt-token"
 ```
 
