@@ -18,6 +18,12 @@ func IsEmailValid(email string) bool {
 func IsMobileNumberValid(mobileNumber string) bool {
 	return mobileNumberRegex.MatchString(mobileNumber)
 }
+func PathIsProtected(fullPath string) bool {
+	if !revokeTokenRegex.MatchString(fullPath) && !showTokenRegex.MatchString(fullPath) {
+		return false
+	}
+	return true
+}
 
 func FormatInvalidMeesage(field, value string) string {
 	return fmt.Sprintf("Provided %s : %s is not in correct format\n", field, value)
@@ -42,10 +48,12 @@ func CreateJWTToken(userName string, admin bool, tokenType string, tokenDuration
 			"aud": admin,
 		})
 	secret := AccessSecret
-	if tokenType == RefrehTokenType {
+	if tokenType == models.RefrehTokenType {
 		secret = RefreshSecret
 	}
 	accessTokenString, err := accessToken.SignedString(secret)
+
+	//inserting token for revoking or invalidation
 	if err == nil {
 		models.InsertToken(issueAt, userName, tokenType)
 	}
@@ -55,7 +63,7 @@ func CreateJWTToken(userName string, admin bool, tokenType string, tokenDuration
 func VerifyJWTToken(token, tokenType string) (*jwt.Token, error) {
 
 	secret := AccessSecret
-	if tokenType == RefrehTokenType {
+	if tokenType == models.RefrehTokenType {
 		secret = RefreshSecret
 	}
 	jwtToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 	"swapnilbarai/go-crud-auth/models"
 	"swapnilbarai/go-crud-auth/utils"
@@ -9,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// middleware :protecting user routes
 func AuthenticationMiddleware(c *gin.Context) {
 	splitTokens := strings.Split(c.GetHeader("Authorization"), " ")
 	authorizationToken := ""
@@ -31,9 +33,24 @@ func AuthenticationMiddleware(c *gin.Context) {
 		c.Abort()
 		return
 	}
+
+	//user able to see active tokens or revoke tokens
+	//if he is admin
+	//only for route /user/active/tokens or user/revoke/{tokenId}
+	if utils.PathIsProtected(c.FullPath()) {
+		userName, _ := jwtToken.Claims.GetSubject()
+		user, exist := models.Users[userName]
+		if !exist || user.Role != utils.Admin {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "User is not authurized for to see active or revoke tokens"})
+			c.Abort()
+			return
+		}
+
+	}
 	c.Next()
 }
 
+// return details asked user
 func GetUserDetails(c *gin.Context) {
 	userName := c.Param("username")
 
@@ -51,16 +68,27 @@ func GetUserDetails(c *gin.Context) {
 
 }
 
+// Revoke the token
+// if tokenType==refresh then it is also revoke access token if it is active and issue with given refresh token
 func RevokeUserToken(c *gin.Context) {
-	var primaryTokenKey models.TokenPrimaryKey
-	if err := c.BindJSON(&primaryTokenKey); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	tokenID, err := strconv.ParseInt(c.Param("tokenID"), 10, 64)
+
+	if err != nil {
+		invalidTokenMessage := "Please provide  tokenID"
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": invalidTokenMessage})
 		return
 	}
-	if _, exists := models.Tokens[primaryTokenKey]; !exists {
+	if _, exists := models.Tokens[tokenID]; !exists {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Token doesn't exsists"})
 		return
 	}
-	models.InvalidateToken(primaryTokenKey.IssueAt, primaryTokenKey.Subject, primaryTokenKey.TokenType)
+	models.InvalidateTokenByID(tokenID)
 	c.JSON(http.StatusOK, gin.H{"message": "Token succesfully revoked"})
+}
+
+// return Json array of Active Tokens
+func ShowActiveTokens(c *gin.Context) {
+	tokens := models.GetActiveToken()
+	c.JSON(http.StatusOK, tokens)
+
 }

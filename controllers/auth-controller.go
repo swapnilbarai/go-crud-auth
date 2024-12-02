@@ -41,6 +41,13 @@ func SignUpUser(c *gin.Context) {
 		return
 	}
 
+	//checking for user role
+	if user.Role != utils.Admin && user.Role != utils.Normal {
+		invalidUserRoleMessage := utils.FormatInvalidMeesage("role", user.Role)
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": invalidUserRoleMessage})
+		return
+	}
+
 	// checking for valid password
 	//only accept user with length greater than 6
 	if len(user.PassWord) < 6 {
@@ -61,7 +68,7 @@ func SignUpUser(c *gin.Context) {
 	models.Users[user.UserName] = user
 	okayMeesage := fmt.Sprintf("User: %s is succesfully created.Please try login\n", user.UserName)
 	c.JSON(http.StatusCreated, gin.H{"message": okayMeesage})
-	return
+
 }
 
 func SignInUser(c *gin.Context) {
@@ -79,19 +86,21 @@ func SignInUser(c *gin.Context) {
 		return
 	}
 
+	//comparing password
 	hashPassword := utils.HashPassword(password)
 	storedPassword := models.Users[userName].PassWord
 	if hashPassword != storedPassword {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Please enter valid password"})
 		return
 	}
+	//giving back token
 	createNewToken(c, userName)
-
-	return
+	c.JSON(http.StatusOK, gin.H{"message": "sucessfully logged in"})
 
 }
 
 func RefreshToken(c *gin.Context) {
+	//token format "bearer x.y.z"
 	splitTokens := strings.Split(c.GetHeader("Refresh-Authorization"), " ")
 	authorizationToken := ""
 	if len(splitTokens) == 2 {
@@ -101,11 +110,16 @@ func RefreshToken(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing refresh-token"})
 		return
 	}
-	jwtToken, err := utils.VerifyJWTToken(authorizationToken, utils.RefrehTokenType)
+	//verifying jwt token
+	jwtToken, err := utils.VerifyJWTToken(authorizationToken, models.RefrehTokenType)
+
+	//other error
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	//expire case or any other error
 	if !jwtToken.Valid {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
 		return
@@ -114,33 +128,38 @@ func RefreshToken(c *gin.Context) {
 	//giving new refresh, access token
 	userName, userNameError := jwtToken.Claims.GetSubject()
 	issueAt, issuerTimeError := jwtToken.Claims.GetIssuedAt()
+
 	if userNameError != nil || issuerTimeError != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Malformed Token"})
 		return
 	}
-	models.InvalidateToken(issueAt.Unix(), userName, utils.RefrehTokenType)
+	//invalidating previous token
+	models.InvalidateToken(issueAt.Unix(), userName, models.RefrehTokenType)
+	//creating new tokens
 	createNewToken(c, userName)
-	return
+	c.JSON(http.StatusOK, gin.H{"message": "sucessfully refresh tokens"})
 
 }
 
 func createNewToken(c *gin.Context, userName string) {
-	issuerTime := time.Now().Unix()
+	issuerTime := time.Now().Unix() //for making sure issue time of access and refresh token should be same
 
+	//access token
 	accessToken, err := utils.CreateJWTToken(userName, false, "access", int(utils.AccessTokenDuration), issuerTime)
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	//refresh token
 	refreshToken, err := utils.CreateJWTToken(userName, false, "refresh", int(utils.RefreshTokenDuration), issuerTime)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	//adding access token and refresh token  header to logged in or refresh token request
 	c.Header("Authorization", "Bearer "+accessToken)
-	c.Header("Refresh-Token", "Bearer "+refreshToken)
-	models.InsertToken(issuerTime, userName, utils.AccessTokenType)
-	models.InsertToken(issuerTime, userName, utils.RefrehTokenType)
-	c.JSON(http.StatusOK, gin.H{"message": "sucessfully logged in"})
-	return
+	c.Header("Refresh-Authorization", "Bearer "+refreshToken)
+
 }

@@ -9,7 +9,9 @@ import (
 
 func Initialise() {
 	models.Users = make(map[string]models.User)
-	models.Tokens = make(map[models.TokenPrimaryKey]*models.Token)
+	models.Tokens = make(map[int64]*models.Token)
+	models.IdGenerator = models.RandomNumberGenerator{}
+	models.IdGenerator.Seed()
 	if os.Getenv("ACCESS_SECRET") != "" {
 		utils.AccessSecret = []byte(os.Getenv("ACCESS_SECRET"))
 	}

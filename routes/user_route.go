@@ -12,7 +12,8 @@ func RegisterUserRoutes(router *gin.Engine) {
 	userRoutes.Use(controllers.AuthenticationMiddleware)
 	{
 		userRoutes.GET("/details/:username", controllers.GetUserDetails)
-		userRoutes.POST("/revoke", controllers.RevokeUserToken)
+		userRoutes.GET("/revoke/:tokenID", controllers.RevokeUserToken)
+		userRoutes.GET("/active/tokens", controllers.ShowActiveTokens)
 	}
 
 }
